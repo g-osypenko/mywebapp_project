@@ -1,10 +1,11 @@
+
 set -e
 
 echo "Розпочинаємо розгортання MyWebApp..."
 
 echo "Встановлення системних залежностей..."
 apt-get update
-apt-get install -y python3 python3-venv python3-pip mariadb-server nginx sudo curl ufw
+apt-get install -y python3 python3-venv python3-pip mariadb-server nginx sudo curl ufw libmariadb-dev python3-dev build-essential
 
 echo "Створення користувачів системи..."
 
@@ -83,7 +84,7 @@ echo "Налаштування UFW..."
 ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp 
+ufw allow 22/tcp  
 ufw allow 80/tcp  
 ufw --force enable
 
