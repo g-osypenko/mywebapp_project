@@ -4,16 +4,20 @@ echo "Розпочинаємо розгортання MyWebApp..."
 
 echo "Встановлення системних залежностей..."
 apt-get update
-apt-get install -y python3 python3-venv python3-pip mariadb-server nginx sudo curl
+apt-get install -y python3 python3-venv python3-pip mariadb-server nginx sudo curl ufw
 
 echo "Створення користувачів системи..."
 
 create_human_user() {
     local username=$1
     if ! id -u "$username" > /dev/null 2>&1; then
-        useradd -m -s /bin/bash "$username"
+        if getent group "$username" > /dev/null 2>&1; then
+            useradd -m -s /bin/bash -g "$username" "$username"
+        else
+            useradd -m -s /bin/bash "$username"
+        fi
         echo "$username:12345678" | chpasswd
-        chage -d 0 "$username"
+        chage -d 0 "$username" 
     fi
 }
 
@@ -50,10 +54,12 @@ chown -R app:app "$PROJECT_DIR"
 echo "Встановлення Python-залежностей..."
 sudo -u app bash -c "python3 -m venv $PROJECT_DIR/venv"
 sudo -u app bash -c "$PROJECT_DIR/venv/bin/pip install -r $PROJECT_DIR/requirements.txt"
+
 echo "Налаштування Systemd..."
 cp "$PROJECT_DIR/configs/mywebapp.service" /etc/systemd/system/mywebapp.service
 systemctl daemon-reload
 systemctl enable mywebapp.service
+
 systemctl start mywebapp.service
 
 echo "Налаштування Nginx..."
@@ -69,16 +75,16 @@ chmod 644 /home/student/gradebook
 
 echo "Блокування дефолтного користувача..."
 if [ -n "$SUDO_USER" ] && [ "$SUDO_USER" != "student" ] && [ "$SUDO_USER" != "teacher" ]; then
-    usermod -L "$SUDO_USER"
+    usermod -L "$SUDO_USER" || true
     echo "Користувач $SUDO_USER заблокований."
 fi
 
-echo "Розгортання успішно завершено!"
-
 echo "Налаштування UFW..."
-apt-get install -y ufw
+ufw --force reset
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp  
+ufw allow 22/tcp 
 ufw allow 80/tcp  
 ufw --force enable
+
+echo "Розгортання успішно завершено"
