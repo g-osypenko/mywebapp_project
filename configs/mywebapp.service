@@ -1,0 +1,24 @@
+[Unit]
+Description=MyWebApp Simple Inventory Service
+After=network.target mariadb.service
+
+[Service]
+# Запуск від системного користувача app
+User=app
+Group=app
+WorkingDirectory=/opt/mywebapp_project
+
+# Шлях до віртуального середовища
+Environment="PATH=/opt/mywebapp_project/venv/bin"
+
+# Міграція бази даних перед запуском застосунку
+ExecStartPre=/opt/mywebapp_project/venv/bin/python /opt/mywebapp_project/scripts/migrate.py --db-pass password
+
+# Запуск самого застосунку з параметрами конфігурації V2=1
+ExecStart=/opt/mywebapp_project/venv/bin/python -m mywebapp.main --port 8080 --db-pass password
+
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
