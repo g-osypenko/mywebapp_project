@@ -1,0 +1,53 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: inventory_db
+    restart: always
+    environment:
+      MARIADB_ROOT_PASSWORD: rootpassword
+      MARIADB_DATABASE: mywebapp_db
+      MARIADB_USER: mywebapp
+      MARIADB_PASSWORD: password
+    volumes:
+      - db_data:/var/lib/mysql
+    networks:
+      - inventory_net
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--su-mysql", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  app:
+    build: .
+    container_name: inventory_app
+    restart: always
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python scripts/migrate.py --db-host db --db-user mywebapp --db-pass password --db-name mywebapp_db &&
+             python -m mywebapp.main --db-host db --db-user mywebapp --db-pass password --db-name mywebapp_db --port 8080"
+    networks:
+      - inventory_net
+
+  nginx:
+    image: nginx:alpine
+    container_name: inventory_nginx
+    restart: always
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - app
+    networks:
+      - inventory_net
+
+volumes:
+  db_data:
+
+# Декларуємо кастомну мережу для ізоляції сервісів
+networks:
+  inventory_net:
+    driver: bridge
